@@ -1,9 +1,8 @@
-import ConfigParser
-import io
+import configparser
 
 from gitlab.v4.objects import ProjectTag, ProjectBranch, GitlabGetError
 
-from gitlab_utils import grep_from_file
+from gitlab_utils import grep_from_file, grep_from_file_all
 from library import VersionType
 
 
@@ -11,10 +10,8 @@ def read_project_config(configuration_file, gitlab):
     # Read project config form config
     project_config = ProjectConfig(configuration_file)
 
-    with open(configuration_file) as f:
-        sample_config = f.read()
-    config = ConfigParser.RawConfigParser(allow_no_value=True)
-    config.readfp(io.BytesIO(sample_config))
+    config = configparser.ConfigParser()
+    config.read(configuration_file)
 
     if "projectRepos" not in config.sections():
         print("No section 'projectRepos' found")
@@ -51,10 +48,8 @@ class ProjectVersion:
 class ProjectConfig:
 
     def __init__(self, config_file):
-        with open(config_file) as f:
-            sample_config = f.read()
-        config = ConfigParser.RawConfigParser(allow_no_value=True)
-        config.readfp(io.BytesIO(sample_config))
+        config = configparser.ConfigParser()
+        config.read(config_file)
 
         if "project" not in config.sections():
             print("No section 'project' found")
@@ -96,7 +91,7 @@ class Project:
         try:
             project = self.gitlab.projects.get(self.repo)
         except GitlabGetError:
-            print "Project '%s' Not Found" % self.repo
+            print("Project '%s' Not Found" % self.repo)
 
         # Get all branches
         revisions = project.branches.list(all=True)
@@ -104,16 +99,16 @@ class Project:
         # Checked for merged branches
         for revision in revisions:
             if revision.attributes["merged"]:
-                print "=====ISSUE===== project: '%s' revision: '%s' has already been merged. It can be deleted" % (self.name, revision.name)
+                print("=====ISSUE===== project: '%s' revision: '%s' has already been merged. It can be deleted" % (self.name, revision.name))
 
         # Check if more than 1 releases or hotfixes at once
-        ready_to_release = filter(lambda x: any(map(lambda y: x.name.startswith(y), ["hotfix", "release"])), revisions)
+        ready_to_release = list(filter(lambda x: any(map(lambda y: x.name.startswith(y), ["hotfix", "release"])), revisions))
         if len(ready_to_release) > 1:
-            print "=====ISSUE===== project: '%s' has more that 1 ready to release branches %s" % (self.name,
-                                                                          map(lambda x: x.name, ready_to_release))
+            print("=====ISSUE===== project: '%s' has more that 1 ready to release branches %s" % (self.name,
+                                                                          map(lambda x: x.name, ready_to_release)))
 
         # Get only hotfix, release, develop and master branches and tags
-        revisions = filter(lambda x: any(map(lambda y: x.name.startswith(y), ["hotfix", "release", "develop", "master"])), revisions)
+        revisions = list(filter(lambda x: any(map(lambda y: x.name.startswith(y), ["hotfix", "release", "develop", "master"])), revisions))
         revisions.extend(project.tags.list(all=True))
 
         for revision in revisions:
@@ -131,12 +126,12 @@ class Project:
 
             # If project users unknown version of the library raise issue
             if library_version is not None and library_version not in map(lambda x: x.name, library.versions):
-                print "=====ISSUE===== repo: '%s' revision: '%s' uses unknown version of library: '%s'" % (self.repo, revision.name, library_version)
+                print("=====ISSUE===== repo: '%s' revision: '%s' uses unknown version of library: '%s'" % (self.repo, revision.name, library_version))
 
             # If tagged or ready to release version (hotfix/release/master) uses snapshot version of the library raise issue
             if library_version is not None and "SNAPSHOT" in library_version \
                     and (isinstance(revision, ProjectTag) or any(map(lambda y: revision.name.startswith(y), ["hotfix", "release", "master"]))):
-                print "=====ISSUE===== repo: '%s' revision: '%s' uses SNAPSHOT versions on redy to release revision" % (self.repo, revision.name)
+                print("=====ISSUE===== repo: '%s' revision: '%s' uses SNAPSHOT versions on redy to release revision" % (self.repo, revision.name))
 
             if library_version is not None:
                 for version in library.versions:
@@ -146,4 +141,4 @@ class Project:
             if project_version is not None:
                 self.versions.append(ProjectVersion(project_version, revision, library_version))
             # else:
-            #     print "=====ISSUE===== repo: '%s' revision: '%s' unable to get version" % (self.repo, revision.name)
+            #     print("=====ISSUE===== repo: '%s' revision: '%s' unable to get version" % (self.repo, revision.name))

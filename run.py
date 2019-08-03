@@ -5,6 +5,7 @@ import gitlab
 from confluence import ConfluencePage
 from library import Library
 from project import read_project_config
+from functools import reduce
 
 # TODO Check jira if version closed
 
@@ -13,12 +14,11 @@ CONFIG_FILE = "config.ini"
 
 def main():
     timestamp = datetime.datetime.now().strftime("%c")
-    print "Start", timestamp
+    print("Start:", timestamp)
 
     gl = gitlab.Gitlab.from_config(config_files=[CONFIG_FILE])
 
     # Init Library - get versions and make a pam from it
-    print "Parsing library: '%s' data"
     library = Library(gl, CONFIG_FILE)
 
     # Read repos form config
@@ -27,9 +27,9 @@ def main():
     for project in projects:
         project.parse_revisions(library)
 
-    confluence = ConfluencePage(CONFIG_FILE, timestamp)
-    confluence.generate_page(library, projects)
-    confluence.publish_page()
+    # confluence = ConfluencePage(CONFIG_FILE, timestamp)
+    # confluence.generate_page(library, projects)
+    # confluence.publish_page()
 
 
 def seconds_to_str(t):

@@ -1,7 +1,6 @@
-import ConfigParser
-import io
-
+import configparser
 import re
+
 from atlassian import Confluence
 
 
@@ -13,10 +12,8 @@ class ConfluencePage:
         self.timestamp = timestamp
         self.page = None
 
-        with open(config_file) as f:
-            sample_config = f.read()
-        config = ConfigParser.RawConfigParser(allow_no_value=True, defaults={"pageId": None})
-        config.readfp(io.BytesIO(sample_config))
+        config = configparser.ConfigParser()
+        config.read(config_file)
 
         if "confluence" not in config.sections():
             print("No section 'confluence' found")
@@ -42,7 +39,7 @@ class ConfluencePage:
 
         if self.page_id is None:
             if not self.confluence.page_exists(space, title):
-                print "Page Space: '%s' Title: '%s' does not exist" % (space, title)
+                print(("Page Space: '%s' Title: '%s' does not exist" % (space, title)))
                 exit(1)
 
             self.page_id = self.confluence.get_page_id(space, title)
@@ -101,4 +98,4 @@ class ConfluencePage:
 
     def publish_page(self):
         if self.page is not None:
-            print self.confluence.update_page(self.page_id, "Test", self.page, type='page', representation='storage')
+            print((self.confluence.update_page(self.page_id, "Test", self.page, type='page', representation='storage')))
